@@ -6,10 +6,10 @@ export const handleSession =
   (config: SessionConfig): Handle =>
   async ({ event, resolve }) => {
     const sessionManager = sessions(event, config)
-    sessionManager.session_start()
+    sessionManager.start()
 
     const response = await resolve(event)
-    sessionManager.session_write_close()
+    sessionManager.writeClose()
 
     return response
   }

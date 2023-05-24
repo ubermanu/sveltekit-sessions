@@ -10,6 +10,17 @@ export type SessionConfig = {
   savePath?: string
 }
 
+export interface Session<T> {
+  id: string
+  data: T
+  lastActive: number
+  regenerateId: () => void
+  destroy: () => void
+  unset: () => void
+  abort: () => void
+}
+
+// TODO: Implement a garbage collector for those files
 export const sessions = (event: RequestEvent, config: SessionConfig) => {
   const {
     cookieName = 'KITSESSID',
@@ -25,6 +36,15 @@ export const sessions = (event: RequestEvent, config: SessionConfig) => {
     httpOnly: true,
   }
 
+  const session: Partial<Session<unknown>> = {
+    data: {},
+    lastActive: Date.now(),
+    regenerateId: session_regenerate_id,
+    destroy: session_destroy,
+    unset: session_unset,
+    abort: session_abort,
+  }
+
   /** Starts a new session or resumes an existing session. */
   function session_start(): void {
     const id = session_id()
@@ -33,13 +53,15 @@ export const sessions = (event: RequestEvent, config: SessionConfig) => {
       const sessionData = fs.readFileSync(sessionFile, 'utf8')
       const decryptedSessionData = decrypt(sessionData, secret)
       try {
-        event.locals.session = JSON.parse(decryptedSessionData)
+        const data = JSON.parse(decryptedSessionData)
+        event.locals.session = { ...session, id, data }
       } catch (e) {
-        event.locals.session = {}
+        event.locals.session = { ...session, id }
       }
     } else {
-      event.cookies.set(cookieName, uuid(), cookieParams)
-      event.locals.session = {}
+      const newId = uuid()
+      event.cookies.set(cookieName, newId, cookieParams)
+      event.locals.session = { ...session, id: newId }
     }
   }
 
@@ -53,7 +75,6 @@ export const sessions = (event: RequestEvent, config: SessionConfig) => {
     const id = session_id()
     if (id) {
       const newId = uuid()
-
       event.cookies.set(cookieName, newId, cookieParams)
 
       // Rename the session file
@@ -72,24 +93,25 @@ export const sessions = (event: RequestEvent, config: SessionConfig) => {
       fs.unlinkSync(sessionFile)
       event.cookies.delete(cookieName)
     }
-    event.locals.session = {}
+    event.locals.session = { ...session, id }
   }
 
   /** Unsets all session variables. */
   function session_unset(): void {
-    event.locals.session = {}
+    event.locals.session = { ...event.locals?.session, data: {} }
   }
 
   /** Writes session data and ends session. */
   function session_write_close(): void {
     const id = session_id()
     if (id) {
+      // TODO: Save session data + lastActive + ttl
       const sessionFile = `${savePath}/${id}`
-      const sessionData = JSON.stringify(event.locals.session)
+      const sessionData = JSON.stringify(event.locals.session?.data)
       const encryptedSessionData = encrypt(sessionData, secret)
       fs.writeFileSync(sessionFile, encryptedSessionData, 'utf8')
     }
-    event.locals.session = {}
+    event.locals.session = { ...session, id }
   }
 
   /** Discards session array changes and finish session. */
@@ -98,12 +120,12 @@ export const sessions = (event: RequestEvent, config: SessionConfig) => {
   }
 
   return {
-    session_start,
-    session_id,
-    session_regenerate_id,
-    session_destroy,
-    session_unset,
-    session_write_close,
-    session_abort,
+    start: session_start,
+    id: session_id,
+    regenerateId: session_regenerate_id,
+    destroy: session_destroy,
+    unset: session_unset,
+    writeClose: session_write_close,
+    abort: session_abort,
   }
 }
