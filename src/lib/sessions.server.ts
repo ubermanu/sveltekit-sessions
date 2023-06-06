@@ -16,7 +16,7 @@ type SessionManagerConfig = {
   savePath?: string
 }
 
-const sessionMap = new Map<string, Session>()
+const sessions = new Map<string, Session>()
 
 /** Create new session id */
 export const session_create_id = () => {
@@ -41,7 +41,7 @@ export const session_decode = (data: string) => {
 export const session_destroy = (event: RequestEvent) => {
   const sessionId = session_id(event)
   if (sessionId) {
-    sessionMap.delete(sessionId)
+    sessions.delete(sessionId)
     event.cookies.delete(session_name())
   }
   delete event.locals.session
@@ -86,9 +86,9 @@ export const session_gc = () => {
 
   if (Math.random() < gc_probability) {
     const now = Date.now()
-    sessionMap.forEach((session, id) => {
+    sessions.forEach((session, id) => {
       if (session.expires < now) {
-        sessionMap.delete(id)
+        sessions.delete(id)
       }
     })
   }
@@ -121,19 +121,19 @@ export const session_regenerate_id = (
     return false
   }
 
-  const session = sessionMap.get(oldId)
+  const session = sessions.get(oldId)
 
   if (!session) {
     return false
   }
 
   const newId = session_create_id()
-  sessionMap.set(newId, session)
+  sessions.set(newId, session)
 
   event.cookies.set(session_name(), newId)
 
   if (delete_old_session) {
-    sessionMap.delete(oldId)
+    sessions.delete(oldId)
   }
 
   return true
@@ -161,7 +161,7 @@ export const session_start = (event: RequestEvent) => {
   }
 
   const sessionId = session_id(event)
-  const session = sessionId ? sessionMap.get(sessionId) : null
+  const session = sessionId ? sessions.get(sessionId) : null
   event.locals.session = session?.data ?? {}
 }
 
@@ -203,7 +203,7 @@ export const session_unset = (event: RequestEvent) => {
 export const session_write_close = (event: RequestEvent) => {
   const sessionId = session_id(event)
   if (sessionId) {
-    sessionMap.set(sessionId, {
+    sessions.set(sessionId, {
       data: event.locals.session,
       expires: Date.now() + 180 * 60,
     })
@@ -216,12 +216,10 @@ export const session_commit = (event: RequestEvent) => {
   return session_write_close(event)
 }
 
+/** Custom session handler for Kit */
 export const handleSession: Handle = async ({ event, resolve }) => {
   session_start(event)
   const response = await resolve(event)
-
-  console.log('response', event.locals.session)
   session_write_close(event)
-
   return response
 }
