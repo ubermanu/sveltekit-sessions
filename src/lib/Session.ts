@@ -2,14 +2,13 @@ import type { SessionManager } from '$lib/SessionManager.js'
 import type { RequestEvent } from '@sveltejs/kit'
 
 export class Session {
-  private manager: SessionManager
-  private event: RequestEvent
-  private data: Record<string, unknown> = {}
+  private readonly manager: SessionManager
+  private readonly event: RequestEvent
+  data: Record<string, unknown> = {}
 
   constructor(manager: SessionManager, event: RequestEvent) {
     this.manager = manager
     this.event = event
-    this.data = {}
   }
 
   get(key: string) {

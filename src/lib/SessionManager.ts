@@ -1,3 +1,4 @@
+import { Session } from '$lib/Session.js'
 import type { RequestEvent } from '@sveltejs/kit'
 import { decrypt, encrypt, uuid } from './crypto.js'
 
@@ -30,7 +31,7 @@ export class SessionManager {
     return uuid()
   }
 
-  encode(data: string) {
+  encode(data: Record<string, unknown>) {
     return encrypt(JSON.stringify(data), this.secret)
   }
 
@@ -43,7 +44,7 @@ export class SessionManager {
   }
 
   abort(event: RequestEvent) {
-    event.locals.session = null
+    // TODO: event.locals.session = null
   }
 
   /** Start the session */
@@ -54,10 +55,10 @@ export class SessionManager {
 
     const sessionId = this.id(event)
     const session = sessionId ? this.sessions.get(sessionId) : null
-    event.locals.session = {}
+    event.locals.session = new Session(this, event)
 
-    if (session?.data) {
-      event.locals.session = this.decode(session.data)
+    if (session) {
+      event.locals.session.data = this.decode(session.data)
     }
   }
 
@@ -68,7 +69,7 @@ export class SessionManager {
       this.sessions.delete(sessionId)
       event.cookies.delete(this.cookieName)
     }
-    delete event.locals.session
+    // TODO: delete event.locals.session
   }
 
   /** Perform session data garbage collection */
@@ -136,19 +137,23 @@ export class SessionManager {
 
   /** The unset() function frees all session variables currently registered. */
   unset(event: RequestEvent) {
-    event.locals.session = {}
+    event.locals.session.data = {}
     return true
   }
 
   /** End the current session and store session data. */
   writeClose(event: RequestEvent) {
     const sessionId = this.id(event)
-    if (sessionId) {
-      this.sessions.set(sessionId, {
-        data: this.encode(event.locals.session),
-        expires: Date.now() + this.duration,
-      })
+    const session = event.locals.session
+
+    if (!sessionId || !session) {
+      return false
     }
+
+    this.sessions.set(sessionId, {
+      data: this.encode(event.locals.session.data),
+      expires: Date.now() + this.duration,
+    })
     return true
   }
 

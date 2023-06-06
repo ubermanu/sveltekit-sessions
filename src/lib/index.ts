@@ -1,3 +1,4 @@
+import type { Session } from '$lib/Session.js'
 import { SessionManager } from '$lib/SessionManager.js'
 import type { Handle } from '@sveltejs/kit'
 
@@ -12,4 +13,13 @@ export const handleSession: Handle = async ({ event, resolve }) => {
   return response
 }
 
-export type { Session } from '$lib/Session.js'
+/** Augment the default App.Locals interface to include our session */
+declare global {
+  namespace App {
+    interface Locals {
+      session: Session
+    }
+  }
+}
+
+export { Session }
