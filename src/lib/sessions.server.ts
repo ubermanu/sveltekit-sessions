@@ -1,10 +1,13 @@
 import type { Handle, RequestEvent } from '@sveltejs/kit'
-import crypto from 'crypto'
+import { decrypt, encrypt, uuid } from './crypto.js'
 
 /** Sets up a PHP-like session system, but for SvelteKit. */
 
+// TODO: Config
+let secret: string = 'my-secret'
+
 type Session = {
-  data: Record<string, unknown>
+  data: string
   expires: number
 }
 
@@ -19,23 +22,16 @@ type SessionManagerConfig = {
 const sessions = new Map<string, Session>()
 
 /** Create new session id */
-export const session_create_id = () => {
-  return crypto.randomUUID()
-}
+export const session_create_id = () => uuid()
 
 /** Discard session array changes and finish session */
 export const session_abort = (event: RequestEvent) => {
   event.locals.session = null
 }
 
-/**
- * Decodes session data from a session encoded string
- *
- * TODO: Use encryption and implement in other functions
- */
-export const session_decode = (data: string) => {
-  return JSON.parse(data)
-}
+/** Decodes session data from a session encoded string */
+export const session_decode = (data: string) =>
+  JSON.parse(decrypt(data, secret))
 
 /** Destroys all data registered to a session */
 export const session_destroy = (event: RequestEvent) => {
@@ -47,14 +43,9 @@ export const session_destroy = (event: RequestEvent) => {
   delete event.locals.session
 }
 
-/**
- * Encodes the current session data as a session encoded string
- *
- * TODO: Use encryption and implement in other functions
- */
-export const session_encode = (data: string) => {
-  return JSON.stringify(data)
-}
+/** Encodes the current session data as a session encoded string */
+export const session_encode = (data: string) =>
+  encrypt(JSON.stringify(data), secret)
 
 export const session_get_cookie_params = () => {}
 
@@ -100,9 +91,8 @@ export const session_id = (event: RequestEvent): string | null => {
 }
 
 /** Get the current session name */
-export const session_name = (): string => {
-  return 'KITSESSID'
-}
+// TODO: Config
+export const session_name = (): string => 'KITSESSID'
 
 /**
  * Session_regenerate_id() will replace the current session id with a new one,
@@ -162,7 +152,11 @@ export const session_start = (event: RequestEvent) => {
 
   const sessionId = session_id(event)
   const session = sessionId ? sessions.get(sessionId) : null
-  event.locals.session = session?.data ?? {}
+  event.locals.session = {}
+
+  if (session?.data) {
+    event.locals.session = session_decode(session.data)
+  }
 }
 
 const KIT_SESSION_DISABLED = 0
@@ -204,7 +198,7 @@ export const session_write_close = (event: RequestEvent) => {
   const sessionId = session_id(event)
   if (sessionId) {
     sessions.set(sessionId, {
-      data: event.locals.session,
+      data: session_encode(event.locals.session),
       expires: Date.now() + 180 * 60,
     })
   }
