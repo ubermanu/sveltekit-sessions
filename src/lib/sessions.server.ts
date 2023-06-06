@@ -30,8 +30,9 @@ export const session_abort = (event: RequestEvent) => {
 }
 
 /** Decodes session data from a session encoded string */
-export const session_decode = (data: string) =>
-  JSON.parse(decrypt(data, secret))
+export const session_decode = (data: string) => {
+  return JSON.parse(decrypt(data, secret))
+}
 
 /** Destroys all data registered to a session */
 export const session_destroy = (event: RequestEvent) => {
@@ -44,8 +45,9 @@ export const session_destroy = (event: RequestEvent) => {
 }
 
 /** Encodes the current session data as a session encoded string */
-export const session_encode = (data: string) =>
-  encrypt(JSON.stringify(data), secret)
+export const session_encode = (data: string) => {
+  return encrypt(JSON.stringify(data), secret)
+}
 
 export const session_get_cookie_params = () => {}
 
