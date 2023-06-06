@@ -3,11 +3,11 @@ import { redirect } from '@sveltejs/kit'
 
 export const actions: Actions = {
   login: async ({ locals }) => {
-    locals.session.data.loggedIn = true
+    locals.session.loggedIn = true
     throw redirect(303, '/')
   },
   logout: async ({ locals }) => {
-    locals.session.data.loggedIn = false
+    locals.session.loggedIn = false
     throw redirect(303, '/')
   },
 }

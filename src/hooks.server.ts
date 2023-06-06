@@ -1,6 +1,4 @@
-import { handleSession } from '$lib/index.js'
+import { handleSession } from '$lib/sessions.server.js'
 import type { Handle } from '@sveltejs/kit'
 
-export const handle: Handle = handleSession({
-  secret: 'my-secret',
-})
+export const handle: Handle = handleSession
