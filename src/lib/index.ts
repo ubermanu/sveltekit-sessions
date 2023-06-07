@@ -23,4 +23,7 @@ declare global {
   }
 }
 
+export type { SessionAdapter } from '$lib/SessionAdapter.js'
+export { FileSessionAdapter } from '$lib/adapters/FileSessionAdapter.js'
+export { InMemorySessionAdapter } from '$lib/adapters/InMemorySessionAdapter.js'
 export { Session }

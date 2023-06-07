@@ -1,4 +1,6 @@
 import { Session } from '$lib/Session.js'
+import type { SessionAdapter } from '$lib/SessionAdapter.js'
+import { InMemorySessionAdapter } from '$lib/adapters/InMemorySessionAdapter.js'
 import type { RequestEvent } from '@sveltejs/kit'
 import { decrypt, encrypt, uuid } from './crypto.js'
 
@@ -13,26 +15,25 @@ type CookieParams = {
 /**
  * Sets up a session manager for the application.
  *
- * Currently, this is a very basic implementation that only supports
- * cookie-based and in-memory sessions. It is not suitable for production use.
+ * Currently, this is a very basic implementation that supports different
+ * session adapters, including in-memory and file-based sessions. It is not
+ * suitable for production use.
  */
 export class SessionManager {
-  private sessions = new Map<string, { data: string; expires: number }>()
-
+  private adapter: SessionAdapter
   private cookieName: string
   private secret: string
   private duration: number
   private cookieParams: CookieParams
-
   private gc_last: number
   private gc_probability: number
 
   constructor() {
+    this.adapter = new InMemorySessionAdapter()
     this.cookieName = 'KITSESSID'
     this.secret = ''
     this.duration = 60 * 60 * 24 * 7
     this.cookieParams = {}
-
     this.gc_last = 0
     this.gc_probability = 1.0
   }
@@ -58,7 +59,7 @@ export class SessionManager {
 
   /** Cancel all the changes made during the request */
   abort(event: RequestEvent) {
-    // TODO: event.locals.session = null
+    // event.locals.session = null;
   }
 
   /** Start the session */
@@ -68,11 +69,13 @@ export class SessionManager {
     }
 
     const sessionId = this.id(event)
-    const session = sessionId ? this.sessions.get(sessionId) : null
     event.locals.session = new Session(this, event)
 
-    if (session) {
-      event.locals.session.data = this.decode(session.data)
+    if (sessionId) {
+      const sessionData = this.adapter.read(sessionId)
+      if (sessionData) {
+        event.locals.session.data = this.decode(sessionData)
+      }
     }
   }
 
@@ -80,10 +83,10 @@ export class SessionManager {
   destroy(event: RequestEvent) {
     const sessionId = this.id(event)
     if (sessionId) {
-      this.sessions.delete(sessionId)
+      this.adapter.destroy(sessionId)
       event.cookies.delete(this.cookieName)
     }
-    // TODO: delete event.locals.session
+    // delete event.locals.session;
   }
 
   /** Perform session data garbage collection */
@@ -97,10 +100,9 @@ export class SessionManager {
 
     if (Math.random() < this.gc_probability) {
       const now = Date.now()
-      this.sessions.forEach((session, id) => {
-        if (session.expires < now) {
-          this.sessions.delete(id)
-        }
+      const expiredSessions = this.adapter.getExpiredSessions(now)
+      expiredSessions.forEach((sessionId) => {
+        this.adapter.destroy(sessionId)
       })
     }
   }
@@ -115,17 +117,18 @@ export class SessionManager {
       return false
     }
 
-    const session = this.sessions.get(oldId)
-    if (!session) {
+    const sessionData = this.adapter.read(oldId)
+    if (!sessionData) {
       return false
     }
 
     const newId = this.createId()
-    this.sessions.set(newId, session)
+    this.adapter.write(newId, sessionData)
+
     event.cookies.set(this.cookieName, newId, this.cookieParams)
 
     if (deleteOldSession) {
-      this.sessions.delete(oldId)
+      this.adapter.destroy(oldId)
     }
 
     return true
@@ -171,8 +174,9 @@ export class SessionManager {
     return this.cookieParams
   }
 
-  setSaveHandler() {
-    // TODO: Implement
+  /** Set the session adapter */
+  setAdapter(adapter: SessionAdapter) {
+    this.adapter = adapter
   }
 
   status(event: RequestEvent): boolean {
@@ -194,10 +198,7 @@ export class SessionManager {
       return false
     }
 
-    this.sessions.set(sessionId, {
-      data: this.encode(event.locals.session.data),
-      expires: Date.now() + this.duration,
-    })
+    this.adapter.write(sessionId, this.encode(event.locals.session.data))
     return true
   }
 
