@@ -26,9 +26,4 @@ export class Session {
   get id() {
     return this.manager.id(this.event)
   }
-
-  get expires() {
-    // TODO: Implement this
-    return 0
-  }
 }

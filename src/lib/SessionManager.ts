@@ -2,6 +2,14 @@ import { Session } from '$lib/Session.js'
 import type { RequestEvent } from '@sveltejs/kit'
 import { decrypt, encrypt, uuid } from './crypto.js'
 
+type CookieParams = {
+  path?: string
+  domain?: string
+  secure?: boolean
+  httponly?: boolean
+  maxAge?: number
+}
+
 /**
  * Sets up a session manager for the application.
  *
@@ -14,6 +22,7 @@ export class SessionManager {
   private cookieName: string
   private secret: string
   private duration: number
+  private cookieParams: CookieParams
 
   private gc_last: number
   private gc_probability: number
@@ -22,6 +31,7 @@ export class SessionManager {
     this.cookieName = 'KITSESSID'
     this.secret = ''
     this.duration = 60 * 60 * 24 * 7
+    this.cookieParams = {}
 
     this.gc_last = 0
     this.gc_probability = 1.0
@@ -31,18 +41,22 @@ export class SessionManager {
     return uuid()
   }
 
-  encode(data: Record<string, unknown>) {
+  /** Encode the session data, using the secret key */
+  encode(data: Record<string, unknown>): string {
     return encrypt(JSON.stringify(data), this.secret)
   }
 
-  decode(data: string) {
+  /** Decode the session data, using the secret key */
+  decode(data: string): Record<string, unknown> {
     return JSON.parse(decrypt(data, this.secret))
   }
 
-  id(event: RequestEvent) {
+  /** Get the session id from the request */
+  id(event: RequestEvent): string | null {
     return event.cookies.get(this.cookieName) ?? null
   }
 
+  /** Cancel all the changes made during the request */
   abort(event: RequestEvent) {
     // TODO: event.locals.session = null
   }
@@ -50,7 +64,7 @@ export class SessionManager {
   /** Start the session */
   start(event: RequestEvent) {
     if (!event.cookies.get(this.cookieName)) {
-      event.cookies.set(this.cookieName, this.createId())
+      event.cookies.set(this.cookieName, this.createId(), this.cookieParams)
     }
 
     const sessionId = this.id(event)
@@ -108,7 +122,7 @@ export class SessionManager {
 
     const newId = this.createId()
     this.sessions.set(newId, session)
-    event.cookies.set(this.cookieName, newId)
+    event.cookies.set(this.cookieName, newId, this.cookieParams)
 
     if (deleteOldSession) {
       this.sessions.delete(oldId)
@@ -123,8 +137,38 @@ export class SessionManager {
     return true
   }
 
-  setCookieParams() {
-    // TODO: Implement
+  /** Throws an exception if the session manager is not ready to handle sessions. */
+  assertReady() {
+    if (!this.secret) {
+      throw new Error(
+        'SessionManager secret is not set, please set it with setSecret()'
+      )
+    }
+  }
+
+  /** Set the session secret */
+  setSecret(secret: string) {
+    this.secret = secret
+  }
+
+  /** Set the session cookie name */
+  setCookieName(name: string) {
+    this.cookieName = name
+  }
+
+  /** Get the session cookie name */
+  getCookieName() {
+    return this.cookieName
+  }
+
+  /** Set additional cookie parameters */
+  setCookieParams(params: CookieParams) {
+    this.cookieParams = params
+  }
+
+  /** Get additional cookie parameters */
+  getCookieParams(): CookieParams {
+    return this.cookieParams
   }
 
   setSaveHandler() {
