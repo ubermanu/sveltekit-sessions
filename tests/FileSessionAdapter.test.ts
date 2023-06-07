@@ -1,14 +1,10 @@
 import { FileSessionAdapter } from '$lib/adapters/FileSessionAdapter.js'
 import fs from 'node:fs'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 
 const testSessionDir = '.svelte-kit/tests/sessions'
 
 describe('FileSessionAdapter', () => {
-  beforeEach(() => {
-    fs.mkdirSync(testSessionDir, { recursive: true })
-  })
-
   afterEach(() => {
     fs.rmSync(testSessionDir, { recursive: true })
   })

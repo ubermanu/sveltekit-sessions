@@ -7,6 +7,10 @@ export class FileSessionAdapter implements SessionAdapter {
 
   constructor(sessionDir: string) {
     this.sessionDir = sessionDir
+
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir)
+    }
   }
 
   async read(sessionId: string): Promise<string | null> {
