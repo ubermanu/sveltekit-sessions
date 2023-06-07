@@ -11,5 +11,8 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 
   return {
     flashMessage,
+    user: {
+      id: session.get('user_id'),
+    },
   }
 }

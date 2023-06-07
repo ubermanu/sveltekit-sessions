@@ -1,10 +1,15 @@
 <script>
   import FlashMessage from './FlashMessage.svelte'
+  import UserAvatar from './UserAvatar.svelte'
 </script>
 
 <FlashMessage />
 
 <h3>Form actions (+ redirect):</h3>
+
+<UserAvatar />
+
+<br />
 
 <form action="/account?/login" method="post">
   <button type="submit">Log me in</button>
