@@ -1,8 +1,8 @@
 <script>
-  export let data
-
-  $: console.log(data?.session)
+  import FlashMessage from './FlashMessage.svelte'
 </script>
+
+<FlashMessage />
 
 <form action="/account?/login" method="post">
   <button type="submit">Log me in</button>

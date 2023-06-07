@@ -1,8 +1,13 @@
 import type { PageServerLoad } from './$types.js'
 
 export const load: PageServerLoad = async ({ locals }) => {
-  // WARN: This is unsafe, but it's just an example
+  const { session } = locals
+
+  // Consume the flash message
+  const flashMessage = session.get('flashMessage')
+  session.delete('flashMessage')
+
   return {
-    session: locals.session.data,
+    flashMessage,
   }
 }

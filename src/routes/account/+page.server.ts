@@ -2,24 +2,23 @@ import type { Actions } from '@sveltejs/kit'
 import { redirect } from '@sveltejs/kit'
 
 export const actions: Actions = {
-  /**
-   * Login the user
-   *
-   * @param locals
-   */
+  /** Login the user */
   login: async ({ locals }) => {
-    console.log('login')
-    locals.session.set('loggedIn', true)
+    locals.session.set('flashMessage', {
+      type: 'success',
+      message: 'You are now logged in',
+    })
+
     throw redirect(303, '/')
   },
-  /**
-   * Logout the user
-   *
-   * @param locals
-   */
+
+  /** Logout the user */
   logout: async ({ locals }) => {
-    console.log('logout')
-    locals.session.delete('loggedIn')
+    locals.session.set('flashMessage', {
+      type: 'success',
+      message: 'You are now logged out',
+    })
+
     throw redirect(303, '/')
   },
 }
