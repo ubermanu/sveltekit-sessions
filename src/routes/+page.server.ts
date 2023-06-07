@@ -6,8 +6,8 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
   depends('flashMessage')
 
   // Consume the flash message
-  const flashMessage = session.get('flashMessage')
-  session.delete('flashMessage')
+  const flashMessage = session.get('flash_message')
+  session.delete('flash_message')
 
   return {
     flashMessage,
