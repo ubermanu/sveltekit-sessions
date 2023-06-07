@@ -6,12 +6,14 @@ export const actions: Actions = {
   login: async ({ locals }) => {
     const { session } = locals
 
-    session.set('flash_message', {
-      type: 'success',
-      message: 'You are now logged in',
-    })
+    if (!session.has('user_id')) {
+      session.set('flash_message', {
+        type: 'success',
+        message: 'You are now logged in',
+      })
 
-    session.set('user_id', crypto.randomUUID())
+      session.set('user_id', crypto.randomUUID())
+    }
 
     throw redirect(303, '/')
   },
@@ -20,12 +22,14 @@ export const actions: Actions = {
   logout: async ({ locals }) => {
     const { session } = locals
 
-    session.set('flash_message', {
-      type: 'success',
-      message: 'You are now logged out',
-    })
+    if (session.has('user_id')) {
+      session.set('flash_message', {
+        type: 'success',
+        message: 'You are now logged out',
+      })
 
-    session.delete('user_id')
+      session.delete('user_id')
+    }
 
     throw redirect(303, '/')
   },

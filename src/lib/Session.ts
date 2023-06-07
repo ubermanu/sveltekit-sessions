@@ -15,6 +15,10 @@ export class Session {
     return this.data[key]
   }
 
+  has(key: string) {
+    return key in this.data
+  }
+
   set(key: string, value: unknown) {
     this.data[key] = value
   }

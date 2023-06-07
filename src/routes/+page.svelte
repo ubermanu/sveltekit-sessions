@@ -1,6 +1,8 @@
 <script>
   import FlashMessage from './FlashMessage.svelte'
   import UserAvatar from './UserAvatar.svelte'
+
+  export let data
 </script>
 
 <FlashMessage />
@@ -11,12 +13,12 @@
 
 <br />
 
-<form action="/account?/login" method="post">
-  <button type="submit">Log me in</button>
-</form>
-
-<form action="/account?/logout" method="post">
-  <button type="submit">Log out</button>
+<form method="post">
+  {#if data?.user?.id}
+    <button type="submit" formaction="/account?/logout">Log Out</button>
+  {:else}
+    <button type="submit" formaction="/account?/login">Log In</button>
+  {/if}
 </form>
 
 <h3>Link (+ redirect):</h3>
