@@ -2,36 +2,36 @@ import type { SessionAdapter } from '$lib/SessionAdapter.js'
 
 /** In-memory session adapter. Stores session data in memory using a Map. */
 export class InMemorySessionAdapter implements SessionAdapter {
-  private sessions = new Map<string, string>()
+  private sessions: Map<string, { data: string; expires: number }>
 
-  async read(sessionId: string) {
-    return this.sessions.get(sessionId) ?? null
+  constructor() {
+    this.sessions = new Map()
   }
 
-  async write(sessionId: string, data: string) {
-    this.sessions.set(sessionId, data)
+  async read(sessionId: string): Promise<string | null> {
+    const session = this.sessions.get(sessionId)
+    if (session && session.expires < Date.now()) {
+      this.sessions.delete(sessionId)
+      return null
+    }
+    return session ? session.data : null
   }
 
-  async destroy(sessionId: string) {
+  async write(sessionId: string, data: string, expires: number): Promise<void> {
+    this.sessions.set(sessionId, { data, expires })
+  }
+
+  async destroy(sessionId: string): Promise<void> {
     this.sessions.delete(sessionId)
   }
 
-  async getExpiredSessions(timestamp: number) {
+  async getExpiredSessions(timestamp: number): Promise<string[]> {
     const expiredSessions: string[] = []
-    this.sessions.forEach((_, sessionId) => {
-      if (this.isSessionExpired(sessionId, timestamp)) {
+    this.sessions.forEach((session, sessionId) => {
+      if (session.expires < timestamp) {
         expiredSessions.push(sessionId)
       }
     })
     return expiredSessions
-  }
-
-  private isSessionExpired(sessionId: string, timestamp: number): boolean {
-    const sessionData = this.sessions.get(sessionId)
-    if (sessionData) {
-      const session = JSON.parse(sessionData)
-      return session.expires < timestamp
-    }
-    return false
   }
 }
