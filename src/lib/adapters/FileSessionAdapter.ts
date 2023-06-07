@@ -9,7 +9,7 @@ export class FileSessionAdapter implements SessionAdapter {
     this.sessionDir = sessionDir
 
     if (!fs.existsSync(sessionDir)) {
-      fs.mkdirSync(sessionDir)
+      fs.mkdirSync(sessionDir, { recursive: true })
     }
   }
 
