@@ -63,16 +63,16 @@ export class SessionManager {
   }
 
   /** Start the session */
-  start(event: RequestEvent) {
+  async start(event: RequestEvent) {
     if (!event.cookies.get(this.cookieName)) {
       event.cookies.set(this.cookieName, this.createId(), this.cookieParams)
     }
 
-    const sessionId = this.id(event)
+    const sessionId = await this.id(event)
     event.locals.session = new Session(this, event)
 
     if (sessionId) {
-      const sessionData = this.adapter.read(sessionId)
+      const sessionData = await this.adapter.read(sessionId)
       if (sessionData) {
         event.locals.session.data = this.decode(sessionData)
       }
@@ -80,17 +80,17 @@ export class SessionManager {
   }
 
   /** Destroy the session */
-  destroy(event: RequestEvent) {
-    const sessionId = this.id(event)
+  async destroy(event: RequestEvent) {
+    const sessionId = await this.id(event)
     if (sessionId) {
-      this.adapter.destroy(sessionId)
+      await this.adapter.destroy(sessionId)
       event.cookies.delete(this.cookieName)
     }
     // delete event.locals.session;
   }
 
   /** Perform session data garbage collection */
-  gc() {
+  async gc() {
     const now = Date.now()
     if (now - this.gc_last < 1000 * 60 * 60) {
       return
@@ -99,11 +99,10 @@ export class SessionManager {
     this.gc_last = now
 
     if (Math.random() < this.gc_probability) {
-      const now = Date.now()
-      const expiredSessions = this.adapter.getExpiredSessions(now)
-      expiredSessions.forEach((sessionId) => {
-        this.adapter.destroy(sessionId)
-      })
+      const expiredSessions = await this.adapter.getExpiredSessions(now)
+      for (const sessionId of expiredSessions) {
+        await this.adapter.destroy(sessionId)
+      }
     }
   }
 
@@ -111,32 +110,30 @@ export class SessionManager {
    * RegenerateId() will replace the current session id with a new one, and keep
    * the current session information.
    */
-  regenerateId(event: RequestEvent, deleteOldSession = false) {
-    const oldId = this.id(event)
+  async regenerateId(event: RequestEvent, deleteOldSession = false) {
+    const oldId = await this.id(event)
     if (!oldId) {
       return false
     }
 
-    const sessionData = this.adapter.read(oldId)
+    const sessionData = await this.adapter.read(oldId)
     if (!sessionData) {
       return false
     }
 
     const newId = this.createId()
-    this.adapter.write(newId, sessionData)
-
+    await this.adapter.write(newId, sessionData, Date.now() + this.duration)
     event.cookies.set(this.cookieName, newId, this.cookieParams)
 
     if (deleteOldSession) {
-      this.adapter.destroy(oldId)
+      await this.adapter.destroy(oldId)
     }
 
     return true
   }
 
-  /** Re-initialize session array with original values */
-  reset(event: RequestEvent) {
-    this.start(event)
+  async reset(event: RequestEvent) {
+    await this.start(event)
     return true
   }
 
@@ -190,20 +187,21 @@ export class SessionManager {
   }
 
   /** End the current session and store session data. */
-  writeClose(event: RequestEvent) {
-    const sessionId = this.id(event)
+  async writeClose(event: RequestEvent) {
+    const sessionId = await this.id(event)
     const session = event.locals.session
 
     if (!sessionId || !session) {
       return false
     }
 
-    this.adapter.write(sessionId, this.encode(event.locals.session.data))
+    const encodedData = this.encode(session.data)
+    await this.adapter.write(sessionId, encodedData, Date.now() + this.duration)
     return true
   }
 
   /** Alias of session_write_close() */
-  commit(event: RequestEvent) {
+  async commit(event: RequestEvent) {
     return this.writeClose(event)
   }
 }

@@ -1,5 +1,5 @@
 import type { SessionAdapter } from '$lib/SessionAdapter.js'
-import fs from 'node:fs'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 
 /** File-based session adapter. Stores session data in files on the filesystem. */
@@ -8,40 +8,37 @@ export class FileSessionAdapter implements SessionAdapter {
 
   constructor(sessionDir: string) {
     this.sessionDir = sessionDir
-    if (!fs.existsSync(sessionDir)) {
-      fs.mkdirSync(sessionDir, { recursive: true })
-    }
   }
 
-  read(sessionId: string): string | null {
+  async read(sessionId: string) {
     const filePath = this.getSessionFilePath(sessionId)
     try {
-      return fs.readFileSync(filePath, 'utf8')
+      return await fs.readFile(filePath, 'utf8')
     } catch (error) {
       return null
     }
   }
 
-  write(sessionId: string, data: string): void {
+  async write(sessionId: string, data: string) {
     const filePath = this.getSessionFilePath(sessionId)
-    fs.writeFileSync(filePath, data)
+    await fs.writeFile(filePath, data)
   }
 
-  destroy(sessionId: string): void {
+  async destroy(sessionId: string) {
     const filePath = this.getSessionFilePath(sessionId)
     try {
-      fs.unlinkSync(filePath)
+      await fs.unlink(filePath)
     } catch (error) {
       // Ignore if the file doesn't exist
     }
   }
 
-  getExpiredSessions(timestamp: number): string[] {
+  async getExpiredSessions(timestamp: number) {
     const expiredSessions: string[] = []
-    const sessionFiles = fs.readdirSync(this.sessionDir)
+    const sessionFiles = await fs.readdir(this.sessionDir)
     for (const sessionFile of sessionFiles) {
       const filePath = `${this.sessionDir}/${sessionFile}`
-      const sessionData = fs.readFileSync(filePath, 'utf8')
+      const sessionData = await fs.readFile(filePath, 'utf8')
       const session = JSON.parse(sessionData)
       if (session.expires < timestamp) {
         expiredSessions.push(sessionFile)

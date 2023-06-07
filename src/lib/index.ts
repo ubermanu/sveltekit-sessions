@@ -8,9 +8,9 @@ export const sessionManager = new SessionManager()
 /** Custom session handler for Kit */
 export const handleSession: Handle = async ({ event, resolve }) => {
   sessionManager.assertReady()
-  sessionManager.start(event)
+  await sessionManager.start(event)
   const response = await resolve(event)
-  sessionManager.commit(event)
+  await sessionManager.commit(event)
   return response
 }
 

@@ -4,19 +4,19 @@ import type { SessionAdapter } from '$lib/SessionAdapter.js'
 export class InMemorySessionAdapter implements SessionAdapter {
   private sessions = new Map<string, string>()
 
-  read(sessionId: string): string | null {
+  async read(sessionId: string) {
     return this.sessions.get(sessionId) ?? null
   }
 
-  write(sessionId: string, data: string): void {
+  async write(sessionId: string, data: string) {
     this.sessions.set(sessionId, data)
   }
 
-  destroy(sessionId: string): void {
+  async destroy(sessionId: string) {
     this.sessions.delete(sessionId)
   }
 
-  getExpiredSessions(timestamp: number): string[] {
+  async getExpiredSessions(timestamp: number) {
     const expiredSessions: string[] = []
     this.sessions.forEach((_, sessionId) => {
       if (this.isSessionExpired(sessionId, timestamp)) {

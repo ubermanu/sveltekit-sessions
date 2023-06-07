@@ -3,32 +3,8 @@
  * session data storage.
  */
 export interface SessionAdapter {
-  /**
-   * Read the session data from the storage.
-   *
-   * @param sessionId
-   */
-  read(sessionId: string): string | null
-
-  /**
-   * Write the session data to the storage.
-   *
-   * @param sessionId
-   * @param data
-   */
-  write(sessionId: string, data: string): void
-
-  /**
-   * Destroy the session data in the storage.
-   *
-   * @param sessionId
-   */
-  destroy(sessionId: string): void
-
-  /**
-   * Get the expired sessions.
-   *
-   * @param timestamp
-   */
-  getExpiredSessions(timestamp: number): string[]
+  read(sessionId: string): Promise<string | null>
+  write(sessionId: string, data: string, expires: number): Promise<void>
+  destroy(sessionId: string): Promise<void>
+  getExpiredSessions(timestamp: number): Promise<string[]>
 }
